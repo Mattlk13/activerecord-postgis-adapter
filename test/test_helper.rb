@@ -21,6 +21,8 @@ module ActiveRecord
   end
 end
 
+ActiveRecord::Base.establish_test_connection
+
 class SpatialModel < ActiveRecord::Base
   establish_test_connection
 end
@@ -33,8 +35,8 @@ module ActiveSupport
       @database_version ||= SpatialModel.connection.select_value("SELECT version()")
     end
 
-    def pg_10?
-      database_version.include?("PostgreSQL 10")
+    def postgis_version
+      @postgis_version ||= SpatialModel.connection.select_value("SELECT postgis_lib_version()")
     end
 
     def factory
@@ -47,6 +49,11 @@ module ActiveSupport
 
     def spatial_factory_store
       RGeo::ActiveRecord::SpatialFactoryStore.instance
+    end
+
+    def reset_spatial_store
+      spatial_factory_store.clear
+      spatial_factory_store.default = nil
     end
   end
 end

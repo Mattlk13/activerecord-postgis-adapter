@@ -1,6 +1,40 @@
+### Unreleased
+
+* Modify `truncate_tables` to ignore spatial_ref_sys #341
+
+### 7.1.0 / 2021-03-28
+
+* Support Attributes #334
+* Access `configuration_hash` using symbols #335
+* Support JRuby #330
+
+### 7.0.1 / 2021-01-13
+
+* Fix db:gis:setup task #329
+
+### 7.0.0 / 2020-12-22
+
+* Add ActiveRecord 6.1 Compatability (tagliala) #324
+* Change SpatialFactoryStore attribute parsing #325
+* Update Arel Module #325
+
+### 6.0.2 / 2020-03-28
+
+* Support JRuby #331
+
+### 6.0.1 / 2020-08-16
+
+* Fix SchemaStatements#initialize_type_map #309
+* Add support for Ruby 2.7 #306
+* Adapt gem to ActiveRecord 6.0. #315
+
 ### 6.0.0 / 2019-08-21
 
 * Support ActiveRecord 6.0 #303
+
+### 5.2.3 / 2021-03-28
+
+* Support JRuby #332
 
 ### 5.2.2 / 2018-12-02
 

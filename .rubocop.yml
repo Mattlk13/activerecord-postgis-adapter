@@ -3,14 +3,15 @@ inherit_from: .rubocop_todo.yml
 AllCops:
   TargetRubyVersion: 2.5
   DisplayCopNames: true
+  SuggestExtensions: false
 
-Layout/AlignParameters:
+Layout/ParameterAlignment:
   Enabled: false
 
 Layout/MultilineOperationIndentation:
   Enabled: false
 
-Metrics/LineLength:
+Layout/LineLength:
   Max: 130
 
 Style/NumericPredicate:

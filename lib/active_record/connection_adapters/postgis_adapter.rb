@@ -7,13 +7,8 @@
 
 require "rgeo/active_record"
 
-# autoload AbstractAdapter to avoid circular require and void context warnings
-module ActiveRecord
-  module ConnectionAdapters
-    AbstractAdapter
-  end
-end
-
+require "active_record/connection_adapters"
+require "active_record/connection_adapters/postgis/database_statements"
 require "active_record/connection_adapters/postgresql_adapter"
 require "active_record/connection_adapters/postgis/version"
 require "active_record/connection_adapters/postgis/column_methods"
@@ -24,6 +19,7 @@ require "active_record/connection_adapters/postgis/spatial_column"
 require "active_record/connection_adapters/postgis/arel_tosql"
 require "active_record/connection_adapters/postgis/setup"
 require "active_record/connection_adapters/postgis/oid/spatial"
+require "active_record/connection_adapters/postgis/type" # has to be after oid/*
 require "active_record/connection_adapters/postgis/create_connection"
 require "active_record/connection_adapters/postgis/postgis_database_tasks"
 
@@ -38,7 +34,7 @@ end
 module ActiveRecord
   module ConnectionAdapters
     class PostGISAdapter < PostgreSQLAdapter
-      include PostGIS::SchemaStatements
+      ADAPTER_NAME = 'PostGIS'
 
       SPATIAL_COLUMN_OPTIONS =
         {
@@ -57,22 +53,10 @@ module ActiveRecord
       # http://postgis.17.x6.nabble.com/Default-SRID-td5001115.html
       DEFAULT_SRID = 0
 
-      # def initialize(*args)
-      def initialize(connection, logger, connection_parameters, config)
-        super
+      include PostGIS::SchemaStatements
 
-        @visitor = Arel::Visitors::PostGIS.new(self)
-        # copy from https://github.com/rails/rails/blob/6ece7df8d80c6d93db43878fa4c0278a0204072c/activerecord/lib/active_record/connection_adapters/postgresql_adapter.rb#L199
-        if self.class.type_cast_config_to_boolean(config.fetch(:prepared_statements) { true })
-          @prepared_statements = true
-          @visitor.extend(DetermineIfPreparableVisitor)
-        else
-          @prepared_statements = false
-        end
-      end
-
-      def adapter_name
-        "PostGIS"
+      def arel_visitor # :nodoc:
+        Arel::Visitors::PostGIS.new(self)
       end
 
       def self.spatial_column_options(key)
@@ -105,6 +89,39 @@ module ActiveRecord
           super
         end
       end
+
+      # PostGIS specific types
+      [
+        :geography,
+        :geometry,
+        :geometry_collection,
+        :line_string,
+        :multi_line_string,
+        :multi_point,
+        :multi_polygon,
+        :st_point,
+        :st_polygon,
+      ].each do |geo_type|
+        ActiveRecord::Type.register(geo_type, PostGIS::OID::Spatial, adapter: :postgis)
+      end
     end
   end
+end
+
+# if using JRUBY, create ArJdbc::PostGIS module
+# and prepend it to the PostgreSQL adapter since
+# it is the default adapter_spec.
+# see: https://github.com/jruby/activerecord-jdbc-adapter/blob/master/lib/arjdbc/postgresql/adapter.rb#27
+if RUBY_ENGINE == "jruby"
+  module ArJdbc
+    module PostGIS
+      ADAPTER_NAME = 'PostGIS'
+
+      def adapter_name
+        ADAPTER_NAME
+      end
+    end
+  end
+
+  ArJdbc::PostgreSQL.prepend(ArJdbc::PostGIS)
 end

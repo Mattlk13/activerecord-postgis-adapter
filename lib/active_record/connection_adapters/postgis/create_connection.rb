@@ -10,7 +10,11 @@ module ActiveRecord  # :nodoc:
   module ConnectionHandling  # :nodoc:
     if RUBY_ENGINE == "jruby"
 
+      # modified from https://github.com/jruby/activerecord-jdbc-adapter/blob/master/lib/arjdbc/postgresql/connection_methods.rb#L3
       def postgis_connection(config)
+        config = config.deep_dup
+        config = symbolize_keys_if_necessary(config)
+
         config[:adapter_class] = ConnectionAdapters::PostGISAdapter
         postgresql_connection(config)
       end
@@ -23,9 +27,7 @@ module ActiveRecord  # :nodoc:
       # https://github.com/rails/rails/blob/master/activerecord/lib/active_record/connection_adapters/postgresql_adapter.rb
       # FULL REPLACEMENT because we need to create a different class.
       def postgis_connection(config)
-        conn_params = config.symbolize_keys
-
-        conn_params.delete_if { |_, v| v.nil? }
+        conn_params = config.symbolize_keys.compact
 
         # Map ActiveRecords param names to PGs.
         conn_params[:user] = conn_params.delete(:username) if conn_params[:username]
@@ -35,14 +37,12 @@ module ActiveRecord  # :nodoc:
         valid_conn_param_keys = PG::Connection.conndefaults_hash.keys + [:requiressl]
         conn_params.slice!(*valid_conn_param_keys)
 
-        conn = PG.connect(conn_params)
-        ConnectionAdapters::PostGISAdapter.new(conn, logger, conn_params, config)
-      rescue ::PG::Error => error
-        if error.message.include?(conn_params[:dbname])
-          raise ActiveRecord::NoDatabaseError
-        else
-          raise
-        end
+        ConnectionAdapters::PostGISAdapter.new(
+          ConnectionAdapters::PostGISAdapter.new_client(conn_params),
+          logger,
+          conn_params,
+          config
+        )
       end
 
     end

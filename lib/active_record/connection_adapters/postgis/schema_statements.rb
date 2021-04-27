@@ -35,7 +35,7 @@ module ActiveRecord
         end
 
         # override
-        # https://github.com/rails/rails/blob/master/activerecord/lib/active_record/connection_adapters/postgresql/schema_statements.rb#L523
+        # https://github.com/rails/rails/blob/master/activerecord/lib/active_record/connection_adapters/postgresql/schema_statements.rb#L544
         #
         # returns Postgresql sql type string
         # examples:
@@ -74,8 +74,8 @@ module ActiveRecord
         end
 
         # override
-        def create_table_definition(*args)
-          PostGIS::TableDefinition.new(self, *args)
+        def create_table_definition(*args, **kwargs)
+          PostGIS::TableDefinition.new(self, *args, **kwargs)
         end
 
         # memoize hash of column infos for tables
@@ -85,8 +85,6 @@ module ActiveRecord
         end
 
         def initialize_type_map(map = type_map)
-          super
-
           %w(
             geography
             geometry
@@ -98,10 +96,19 @@ module ActiveRecord
             st_point
             st_polygon
           ).each do |geo_type|
-            map.register_type(geo_type) do |oid, _, sql_type|
-              OID::Spatial.new(oid, sql_type)
+            map.register_type(geo_type) do |_, _, sql_type|
+              # sql_type is a string that comes from the database definition
+              # examples:
+              #   "geometry(Point,4326)"
+              #   "geography(Point,4326)"
+              #   "geometry(Polygon,4326) NOT NULL"
+              #   "geometry(Geography,4326)"
+              geo_type, srid, has_z, has_m, geographic = OID::Spatial.parse_sql_type(sql_type)
+              OID::Spatial.new(geo_type: geo_type, srid: srid, has_z: has_z, has_m: has_m, geographic: geographic)
             end
           end
+
+          super
         end
       end
     end

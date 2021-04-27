@@ -11,9 +11,18 @@ class TasksTest < ActiveSupport::TestCase
 
   def test_create_database_from_extension_in_separate_schema
     drop_db_if_exists
-    configuration = new_connection.merge("postgis_schema" => "postgis")
-    ActiveRecord::Tasks::DatabaseTasks.create(configuration)
+    db_config = new_connection("postgis_schema" => "postgis")
+    ActiveRecord::Tasks::DatabaseTasks.create(db_config)
     refute_empty connection.select_values("SELECT * from postgis.spatial_ref_sys")
+  end
+
+  def test_truncate_tables_ignores_spatial_ref_sys
+    drop_db_if_exists
+    ActiveRecord::Tasks::DatabaseTasks.create(new_connection)
+    refute_empty connection.select_values("SELECT * from public.spatial_ref_sys")
+
+    ActiveRecord::Tasks::DatabaseTasks.send(:truncate_tables, new_connection)
+    refute_empty connection.select_values("SELECT * from public.spatial_ref_sys")
   end
 
   def test_empty_sql_dump
@@ -32,9 +41,9 @@ class TasksTest < ActiveSupport::TestCase
     end
     ActiveRecord::Tasks::DatabaseTasks.structure_dump(new_connection, tmp_sql_filename)
     data = File.read(tmp_sql_filename)
-    assert_includes data, "latlon #{schema_prefix}geography(Point,4326)"
-    assert_includes data, "geo_col #{schema_prefix}geometry(Geometry,4326)"
-    assert_includes data, "poly #{schema_prefix}geometry(MultiPolygon,4326)"
+    assert_includes data, "latlon public.geography(Point,4326)"
+    assert_includes data, "geo_col public.geometry(Geometry,4326)"
+    assert_includes data, "poly public.geometry(MultiPolygon,4326)"
   end
 
   def test_index_sql_dump
@@ -47,9 +56,9 @@ class TasksTest < ActiveSupport::TestCase
     connection.add_index :spatial_test, :name, using: :btree
     ActiveRecord::Tasks::DatabaseTasks.structure_dump(new_connection, tmp_sql_filename)
     data = File.read(tmp_sql_filename)
-    assert_includes data, "latlon #{schema_prefix}geography(Point,4326)"
-    assert_includes data, "CREATE INDEX index_spatial_test_on_latlon ON #{schema_prefix}spatial_test USING gist (latlon);"
-    assert_includes data, "CREATE INDEX index_spatial_test_on_name ON #{schema_prefix}spatial_test USING btree (name);"
+    assert_includes data, "latlon public.geography(Point,4326)"
+    assert_includes data, "CREATE INDEX index_spatial_test_on_latlon ON public.spatial_test USING gist (latlon);"
+    assert_includes data, "CREATE INDEX index_spatial_test_on_name ON public.spatial_test USING btree (name);"
   end
 
   def test_empty_schema_dump
@@ -111,7 +120,7 @@ class TasksTest < ActiveSupport::TestCase
     connection.add_index :test, :name
     ActiveRecord::Tasks::DatabaseTasks.structure_dump(new_connection, tmp_sql_filename)
     data = File.read(tmp_sql_filename)
-    assert_includes data,"CREATE INDEX index_test_on_name ON #{schema_prefix}test USING btree (name);"
+    assert_includes data,"CREATE INDEX index_test_on_name ON public.test USING btree (name);"
   end
 
   def test_add_index_via_references
@@ -122,15 +131,17 @@ class TasksTest < ActiveSupport::TestCase
     end
     ActiveRecord::Tasks::DatabaseTasks.structure_dump(new_connection, tmp_sql_filename)
     data = File.read(tmp_sql_filename)
-    assert_includes data,"CREATE INDEX index_dogs_on_cats_id ON #{schema_prefix}dogs USING btree (cats_id);"
+    assert_includes data,"CREATE INDEX index_dogs_on_cats_id ON public.dogs USING btree (cats_id);"
   end
 
   private
 
-  def new_connection
-    ActiveRecord::Base.test_connection_hash.merge("database" => "postgis_tasks_test")
+  def new_connection(options = {})
+    configuration_options = { "database" => "postgis_tasks_test" }.merge(options)
+    configuration_hash = ActiveRecord::Base.test_connection_hash.merge(configuration_options)
+    ActiveRecord::DatabaseConfigurations::HashConfig.new("default_env", "primary", configuration_hash)
   end
-  
+
   def connection
     ActiveRecord::Base.connection
   end
@@ -144,17 +155,13 @@ class TasksTest < ActiveSupport::TestCase
     FileUtils.mkdir_p(File.dirname(tmp_sql_filename))
     drop_db_if_exists
     ActiveRecord::ConnectionAdapters::PostGIS::PostGISDatabaseTasks.new(new_connection).create
-  rescue ActiveRecord::Tasks::DatabaseAlreadyExists
+  rescue ActiveRecord::DatabaseAlreadyExists
     # ignore
   end
 
   def drop_db_if_exists
     ActiveRecord::ConnectionAdapters::PostGIS::PostGISDatabaseTasks.new(new_connection).drop
-  rescue ActiveRecord::Tasks::DatabaseAlreadyExists
+  rescue ActiveRecord::DatabaseAlreadyExists
     # ignore
-  end
-
-  def schema_prefix
-    pg_10? ? "public." : ""
   end
 end

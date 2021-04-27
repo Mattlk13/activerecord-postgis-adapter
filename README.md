@@ -1,8 +1,8 @@
-# PostGIS ActiveRecord Adapter
+# ActiveRecord PostGIS Adapter
 
 [![Gem Version](https://badge.fury.io/rb/activerecord-postgis-adapter.svg)](https://badge.fury.io/rb/activerecord-postgis-adapter)
 [![Build Status](https://travis-ci.org/rgeo/activerecord-postgis-adapter.svg?branch=master)](https://travis-ci.org/rgeo/activerecord-postgis-adapter)
-[![Code Climate](https://codeclimate.com/github/rgeo/activerecord-postgis-adapter.png)](https://codeclimate.com/github/rgeo/activerecord-postgis-adapter)
+[![Maintainability](https://api.codeclimate.com/v1/badges/4444dc80a2cd6a37baa1/maintainability)](https://codeclimate.com/github/rgeo/activerecord-postgis-adapter/maintainability)
 
 The activerecord-postgis-adapter provides access to features
 of the PostGIS geospatial database from ActiveRecord. It extends
@@ -14,7 +14,7 @@ and features added by the PostGIS extension. It uses the
 
 The adapter provides three basic capabilities:
 
-First, it provides *spatial migrations*. It extends the ActiveRecord migration
+First, it provides _spatial migrations_. It extends the ActiveRecord migration
 syntax to support creating spatially-typed columns and spatial indexes. You
 can control the various PostGIS-provided attributes such as srid, dimension,
 and geographic vs geometric math.
@@ -29,7 +29,29 @@ RGeo objects can be embedded in where clauses.
 
 ## Install
 
-The adapter requires PostgreSQL 9.0+.
+The adapter requires PostgreSQL 9.0+ and PostGIS 2.4+.
+
+### Installing PostGIS
+
+Here are common methods for installing PostGIS, but more detailed methods can be found on the [installation guide](https://postgis.net/install/).
+
+#### MacOS
+
+```sh
+brew install postgis
+```
+
+#### Ubuntu/Debian
+
+```sh
+# The second package can be replaced depending on your postgresql version
+# ex. postgresql-11-postgis-2 is valid as well
+sudo apt-get install postgis postgresql-12-postgis-3
+```
+
+#### Windows
+
+PostGIS is likely available as an optional package via your Postgresql installer. If not, refer to the installation guide.
 
 Gemfile:
 
@@ -37,7 +59,7 @@ Gemfile:
 gem 'activerecord-postgis-adapter'
 ```
 
-Gemfile for JRuby*:
+Gemfile for JRuby\*:
 
 ```ruby
 gem 'activerecord-postgis-adapter'
@@ -47,13 +69,23 @@ gem 'ffi-geos'
 
 _JRuby support for Rails 4.0 and 4.1 was added in version 2.2.0_
 
+#### Version 7.x supports ActiveRecord 6.1
+
+Requirements:
+
+```
+ActiveRecord 6.1
+Ruby 2.5.0+, JRuby
+PostGIS 2.0+
+```
+
 #### Version 6.x supports ActiveRecord 6.0
 
 Requirements:
 
 ```
 ActiveRecord 6.0
-Ruby 2.5.0+ (no JRuby support yet)
+Ruby 2.5.0+, JRuby
 PostGIS 2.0+
 ```
 
@@ -63,7 +95,7 @@ Requirements:
 
 ```
 ActiveRecord 5.1 or 5.2
-Ruby 2.2.2+ (no JRuby support yet)
+Ruby 2.2.2+, JRuby
 PostGIS 2.0+
 ```
 
@@ -128,9 +160,9 @@ adapter. At minimum, you will need to change the `adapter` field from
 
 ```yml
 development:
-  username:           your_username
-  adapter:            postgis
-  host:               localhost
+  username: your_username
+  adapter: postgis
+  host: localhost
   schema_search_path: public
 ```
 
@@ -148,15 +180,15 @@ Here are some other options that are supported:
 development:
   adapter: postgis
   encoding: unicode
-  postgis_extension: postgis      # default is postgis
-  postgis_schema: public          # default is public
+  postgis_extension: postgis # default is postgis
+  postgis_schema: public # default is public
   schema_search_path: public,postgis
   pool: 5
-  database: my_app_development    # your database name
-  username: my_app_user           # the username your app will use to connect
-  password: my_app_password       # the user's password
-  su_username: my_global_user     # a superuser for the database
-  su_password: my_global_pasword  # the superuser's password
+  database: my_app_development # your database name
+  username: my_app_user # the username your app will use to connect
+  password: my_app_password # the user's password
+  su_username: my_global_user # a superuser for the database
+  su_password: my_global_pasword # the superuser's password
 ```
 
 ##### `rgeo` dependency
@@ -237,7 +269,7 @@ end
 
 The first column, "shape1", is created with type "geometry". This is a general
 "base class" for spatial types; the column declares that it can contain values
-of *any* spatial type.
+of _any_ spatial type.
 
 The second column, "shape2", uses a shorthand syntax for the same type as the shape1 column.
 You can create a column either by invoking `column` or invoking the name of the type directly.
@@ -259,30 +291,29 @@ information.
 The following are the data types understood by PostGIS and exposed by
 activerecord-postgis-adapter:
 
-* `:geometry` -- Any geometric type
-* `:st_point` -- Point data
-* `:line_string` -- LineString data
-* `:st_polygon` -- Polygon data
-* `:geometry_collection` -- Any collection type
-* `:multi_point` -- A collection of Points
-* `:multi_line_string` -- A collection of LineStrings
-* `:multi_polygon` -- A collection of Polygons
+- `:geometry` -- Any geometric type
+- `:st_point` -- Point data
+- `:line_string` -- LineString data
+- `:st_polygon` -- Polygon data
+- `:geometry_collection` -- Any collection type
+- `:multi_point` -- A collection of Points
+- `:multi_line_string` -- A collection of LineStrings
+- `:multi_polygon` -- A collection of Polygons
 
 Following are the options understood by the adapter:
 
-* `:geographic` -- If set to true, create a PostGIS geography column for
+- `:geographic` -- If set to true, create a PostGIS geography column for
   longitude/latitude data over a spheroidal domain; otherwise create a
   geometry column in a flat coordinate system. Default is false. Also
   implies :srid set to 4326.
-* `:srid` -- Set a SRID constraint for the column. Default is 4326 for a
+- `:srid` -- Set a SRID constraint for the column. Default is 4326 for a
   geography column, or -1 for a geometry column. Note that PostGIS currently
   (as of version 2.0) requires geography columns to have SRID 4326, so this
   constraint is of limited use for geography columns.
-* `:has_z` -- Specify that objects in this column include a Z coordinate.
+- `:has_z` -- Specify that objects in this column include a Z coordinate.
   Default is false.
-* `:has_m` -- Specify that objects in this column include an M coordinate.
+- `:has_m` -- Specify that objects in this column include an M coordinate.
   Default is false.
-
 
 To create a PostGIS spatial index, add `using: :gist` to your index:
 
@@ -295,6 +326,18 @@ change_table :my_table do |t|
   t.index :lonlat, using: :gist
 end
 ```
+
+### Attributes
+
+Models may also define attributes using the above data types and options.
+
+```ruby
+class SpatialModel < ActiveRecord::Base
+  attribute :centroid, :st_point, srid: 4326, geographic: true
+end
+```
+
+`centroid` will not have an associated column in the `spatial_models` table, but any geometry object assigned to the `centroid` attribute will be cast to a geographic point.
 
 ### Point and Polygon Types with ActiveRecord 4.2+
 
@@ -338,6 +381,36 @@ The default spatial factory for cartesian columns is `RGeo::Cartesian.preferred_
 You do not need to configure the `SpatialFactoryStore` if these defaults are ok.
 
 For more explanation of `SpatialFactoryStore`, see [the rgeo-activerecord README](https://github.com/rgeo/rgeo-activerecord#spatial-factories-for-columns)
+
+#### Changes in 7.0.0
+
+In version 7.0.0+ the attributes in the second argument of `register` will be parsed to try to match one of the expected values for each field. This may break existing store configurations.
+
+For example:
+
+```rb
+# This subset of fields for a Spatial Column
+{geo_type: 'MultiPoint', sql_type: 'geography(MultiPoint,4326)'}
+
+# will be parsed like this to lookup the matching factory
+
+{geo_type: 'multi_point', sql_type: 'geography'}
+
+# so you should update your configuration from
+config.register(RGeo::Geos.factory_generator,
+                {geo_type: 'MultiPoint', sql_type: 'geography(MultiPoint,4326)'})
+# to
+config.register(RGeo::Geos.factory_generator,
+                {geo_type: 'multi_point', sql_type: 'geography'})
+```
+
+See the [rgeo-activerecord docs](https://github.com/rgeo/rgeo-activerecord#spatial-factories-for-columns) for a list of the expected values for all of the accepted fields.
+
+### Deploying to Heroku
+
+See the [wiki entry](https://github.com/rgeo/activerecord-postgis-adapter/wiki/Heroku) and [linked issue](https://github.com/rgeo/activerecord-postgis-adapter/issues/14) for some notes on Heroku deployments.
+
+Note: RGeo is looking for a Heroku user to help formalize/expand the wiki. If you're interested, please open a PR with a new md file, which can be copied to the wiki.
 
 ## Working With Spatial Data
 
@@ -439,6 +512,43 @@ want to perform a spatial query, you'll look for, say, all the points within a
 given area. For those queries, you'll need to use the standard spatial SQL
 functions provided by PostGIS.
 
+To perform more advanced spatial queries, you can use the extended Arel interface included in the activerecord-postgis-adapter. The functions accept WKT strings or RGeo features.
+
+```rb
+point = RGeo::Geos.factory(srid: 0).point(1,1)
+
+buildings = Building.arel_table
+containing_buiildings = Building.where(buildings[:geom].st_contains(point))
+```
+
+See [rgeo-activerecord](https://github.com/rgeo/rgeo-activerecord) for more information about advanced spatial queries.
+
+### Joining Spatial Columns
+
+If a spatial column is joined with another model, `srid` and `geographic` will not be automatically inferred and they will default to 0 and `false`, by default. In order to properly infer these options after a join, an `attribute` must be created on the target table.
+
+```ruby
+class SpatialModel < ActiveRecord::Base
+ belongs_to :foo
+
+ # has column geo_point (:st_point, srid: 4326, geographic: true)
+end
+
+class Foo < ActiveRecord::Base
+ has_one :spatial_model
+
+ # re-define geo_point here so join works
+ attribute :geo_point, :st_point, srid: 4326, geographic: true
+end
+
+# perform a query where geo_point is joined to foo
+foo = Foo.joins(:spatial_models).select("foos.id, spatial_models.geo_point").first
+p foo.geo_point.class
+# => RGeo::Geographic::SphericalPointImpl
+p foo.geo_point.srid
+# => 4326
+```
+
 ## Background: PostGIS
 
 A spatial database is one that includes a set of data types, functions,
@@ -467,7 +577,6 @@ includes information on each database column that includes geometric data. In
 recent versions of PostGIS, `geometry_columns` is actually not a table but a
 view into the system catalogs.
 
-
 ## Development and Support
 
 RDoc Documentation is available at https://rdoc.info/gems/activerecord-postgis-adapter
@@ -482,12 +591,17 @@ Support is also available on the rgeo-users google group at https://groups.googl
 
 [Daniel Azuma](https://daniel-azuma.com) authored the PostGIS Adapter and its supporting
 libraries (including RGeo).
-[Tee Parham](https://twitter.com/teeparham) is the current maintainer.
 
-Development is/was supported by:
+[Tee Parham](https://twitter.com/teeparham) is a former maintainer.
 
-* [Pirq](https://pirq.com)
-* [Neighborland](https://neighborland.com)
+[Keith Doggett](https://github.com/keithdoggett) is a current maintainer.
+
+[Ulysse Buonomo](https://github.com/BuonOmo) is a current maintainer.
+
+Development is supported by:
+
+- [Klaxit](https://www.klaxit.com)
+- Goldfish Ads
 
 This adapter implementation owes some debt to the spatial_adapter plugin
 (https://github.com/fragility/spatial_adapter). Although we made some different
